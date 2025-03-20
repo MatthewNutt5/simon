@@ -1,0 +1,3 @@
+# block directories with unnecessary files
+/Debug/
+/.launches/
