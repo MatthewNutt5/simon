@@ -1,7 +1,6 @@
 /* 
- * This file contains the declarations for for common functions that
- * we will use in ELEC327. See LICENSE file for details on licensing.
-*/
+ * simon_setup.h - Header file for simon project boilerplate
+ */
 
 #ifndef simon_setup_include
 #define simon_setup_include
@@ -9,7 +8,6 @@
 #include <ti/devices/msp/msp.h>
 
 #define POWER_STARTUP_DELAY (16)
-
 
 #ifdef __cplusplus
 extern "C" {
@@ -88,36 +86,16 @@ void InitializeTimerA1_PWM(void);
 void InitializeSPI(void);
 
 
-/*
- * @brief Calculates MIDI notes.
- */
-void InitializeMIDINotes();
-
-
-/*
- * @brief Starts playing piezo buzzer at the frequency of given MIDI note.
- */
-void startNote(char midi_note);
-
-
-/*
- * @brief Stops the piezo buzzer.
- */
-void stopNote();
-
-
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* simon_setup_include */
+#endif // simon_setup_include
 
 /*
  *
  * This code is a reproduction of standard TI "driverlib" code from dl_common.h /.c
-
-
  * Copyright (c) 2020, Texas Instruments Incorporated
  * All rights reserved.
  *

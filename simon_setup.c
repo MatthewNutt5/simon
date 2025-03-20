@@ -1,7 +1,8 @@
-#include <math.h>
-#include "simon_setup.h"
+/*
+ * simon_setup.h - Source file for simon project boilerplate
+ */
 
-int MIDI_NOTE_PERIODS[127];
+#include "simon_setup.h"
 
 
 
@@ -32,6 +33,7 @@ void delay_cycles(uint32_t cycles)
 }
 
 
+
 void InitializeProcessor(void) {
     SYSCTL->SOCLOCK.BORTHRESHOLD = SYSCTL_SYSSTATUS_BORCURTHRESHOLD_BORMIN; // Brownout generates a reset.
 
@@ -41,6 +43,7 @@ void InitializeProcessor(void) {
     // Disable MCLK Divider
     update_reg(&SYSCTL->SOCLOCK.MCLKCFG, (uint32_t) 0x0, SYSCTL_MCLKCFG_MDIV_MASK);
 }
+
 
 
 void InitializeGPIO(void) {
@@ -72,6 +75,7 @@ void InitializeGPIO(void) {
 
     delay_cycles(POWER_STARTUP_DELAY); // delay to enable GPIO to turn on and reset
 }
+
 
 
 void InitializeSPI(void) {
@@ -113,6 +117,7 @@ void InitializeSPI(void) {
 }
 
 
+
 void InitializeTimerG0(void) {
 
     TIMG0->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W | GPIO_RSTCTL_RESETSTKYCLR_CLR | GPIO_RSTCTL_RESETASSERT_ASSERT);
@@ -142,6 +147,7 @@ void InitializeTimerG0(void) {
 }
 
 
+
 void InitializeTimerA1_PWM(void) {
     TIMA1->GPRCM.RSTCTL = (GPIO_RSTCTL_KEY_UNLOCK_W | GPIO_RSTCTL_RESETSTKYCLR_CLR | GPIO_RSTCTL_RESETASSERT_ASSERT);
     TIMA1->GPRCM.PWREN = (GPIO_PWREN_KEY_UNLOCK_W | GPIO_PWREN_ENABLE_ENABLE);
@@ -162,28 +168,6 @@ void InitializeTimerA1_PWM(void) {
     // HEADS UP: This sets the frequency of the buzzer!
 
     TIMA1->COUNTERREGS.CC_01[0] = (TIMA1->COUNTERREGS.LOAD  + 1) / 2; // half of load to make this a square wave
-}
-
-
-void InitializeMIDINotes() {
-    for (char i = 0; i < 128; i++) {
-        MIDI_NOTE_PERIODS[i] = (int) (8000000.0f / (8.1758f * powf(2.0f,(i/12.0f))));
-    }
-    return;
-}
-
-
-void startNote(char midi_note) {
-    TIMA1->COUNTERREGS.LOAD = (MIDI_NOTE_PERIODS[midi_note] - 1); // freq = 8000000/(LOAD+1)
-    TIMA1->COUNTERREGS.CC_01[0] = (TIMA1->COUNTERREGS.LOAD  + 1) / 8; // 12.5% duty cycle because it sounds cool
-    TIMA1->COUNTERREGS.CTRCTL |= (GPTIMER_CTRCTL_EN_ENABLED); // Enable the buzzer
-    return;
-}
-
-
-void stopNote() {
-    TIMA1->COUNTERREGS.CTRCTL &= ~(GPTIMER_CTRCTL_EN_ENABLED); // Disable the buzzer
-    return;
 }
 
 
@@ -223,4 +207,3 @@ void stopNote() {
  * OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-

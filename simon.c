@@ -1,5 +1,6 @@
 #include <ti/devices/msp/msp.h>
 #include "simon_setup.h"
+#include "simon_buzzer.h"
 
 // LED packets
 uint16_t offTxPacket[] = {0x0, 0x0,
