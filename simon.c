@@ -1,52 +1,17 @@
 #include <ti/devices/msp/msp.h>
 #include "simon_setup.h"
-#include "simon_buzzer.h"
+#include "simon_io.h"
 
-// LED packets
-uint16_t offTxPacket[] = {0x0, 0x0,
-                          0xE000, 0x0000,
-                          0xE000, 0x0000,
-                          0xE000, 0x0000,
-                          0xE000, 0x0000,
-                          0xFFFF, 0xFFFF};
 
-uint16_t blueTxPacket[] = {0x0, 0x0,
-                           0xE550, 0x1010,
-                           0xE000, 0x0000,
-                           0xE000, 0x0000,
-                           0xE000, 0x0000,
-                           0xFFFF, 0xFFFF};
 
-uint16_t redTxPacket[] = {0x0, 0x0,
-                          0xE000, 0x0000,
-                          0xE500, 0x0050,
-                          0xE000, 0x0000,
-                          0xE000, 0x0000,
-                          0xFFFF, 0xFFFF};
-
-uint16_t greenTxPacket[] = {0x0, 0x0,
-                            0xE000, 0x0000,
-                            0xE000, 0x0000,
-                            0xE500, 0x5000,
-                            0xE000, 0x0000,
-                            0xFFFF, 0xFFFF};
-
-uint16_t yellowTxPacket[] = {0x0, 0x0,
-                             0xE000, 0x0000,
-                             0xE000, 0x0000,
-                             0xE000, 0x0000,
-                             0xE500, 0x4040,
-                             0xFFFF, 0xFFFF};
-
-uint16_t *txPacket;
-
+// Array for writing LED packets
+uint16_t txPacket[12];
 
 // SPI stuff
 int transmissionComplete = 0; // flag for SPI ISR wakeup
 int timerTicked = 0; // flag for timer ISR wakeup
 int idx = 0;
-int message_len = sizeof(offTxPacket) / sizeof(offTxPacket[0]);
-
+int message_len = sizeof(txPacket) / sizeof(txPacket[0]);
 
 // Song stuff
 // Note durations are in multiples of 10ms
@@ -63,7 +28,7 @@ int notes[] = {88, 86, 84, 86, 88, 88, 88, -1, 86, 86, 86, -1, 88, 91, 91, -1, 8
 int LENGTH = sizeof(notes) / sizeof(int);
 //int times[] = {QUARTER, QUARTER, QUARTER, QUARTER, QUARTER, QUARTER, QUARTER};
 
-
+// Enum for FSM
 enum current_state_enum {
     LIGHTS_OFF = 0,
     BLUE = 1,
@@ -99,7 +64,7 @@ int main(void)
         // BUTTONS ARE ACTIVE LOW
         switch (next_state) {
         case INTRO:
-            txPacket = offTxPacket; // Set what SPI message will be transmitted. (all LEDs off)
+            writeLights(txPacket, (bool[4]){0, 0, 0, 0}); // Set what SPI message will be transmitted. (all LEDs off)
             if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) != (SW1 | SW2 | SW3 | SW4) ) // if any buttons are on
                 next_state = LIGHTS_OFF;
             else
@@ -122,7 +87,7 @@ int main(void)
             break;
 
         case LIGHTS_OFF:
-            txPacket = offTxPacket; // Set what SPI message will be transmitted. (all LEDs off)
+            writeLights(txPacket, (bool[4]){0, 0, 0, 0}); // Set what SPI message will be transmitted. (all LEDs off)
             if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // If the button is on
                 next_state = BLUE;
                 startNote(79 + NOTE_OFFSET);
@@ -144,7 +109,7 @@ int main(void)
             break;
 
         case BLUE:
-            txPacket = blueTxPacket;
+            writeLights(txPacket, (bool[4]){1, 0, 0, 0});
             if ( (GPIOA->DIN31_0 & SW1) != SW1 ) // If the button is on
                 next_state = BLUE;
             else {
@@ -154,7 +119,7 @@ int main(void)
             break;
 
         case RED:
-            txPacket = redTxPacket;
+            writeLights(txPacket, (bool[4]){0, 1, 0, 0});
             if ( (GPIOA->DIN31_0 & SW2) != SW2 ) // If the button is on
                 next_state = RED;
             else {
@@ -164,7 +129,7 @@ int main(void)
             break;
 
         case GREEN:
-            txPacket = greenTxPacket;
+            writeLights(txPacket, (bool[4]){0, 0, 1, 0});
             if ( (GPIOA->DIN31_0 & SW3) != SW3 ) // If the button is on
                 next_state = GREEN;
             else {
@@ -174,7 +139,7 @@ int main(void)
             break;
 
         case YELLOW:
-            txPacket = yellowTxPacket;
+            writeLights(txPacket, (bool[4]){0, 0, 0, 1});
             if ( (GPIOA->DIN31_0 & SW4) != SW4 ) // If the button is on
                 next_state = YELLOW;
             else {

@@ -1,9 +1,9 @@
 /*
- * simon_setup.h - Header file for simon project buzzer control
+ * simon_setup.h - Header file for simon project buzzer and light control
  */
 
-#ifndef simon_buzzer_include
-#define simon_buzzer_include
+#ifndef simon_io_include
+#define simon_io_include
 
 #include <ti/devices/msp/msp.h>
 
@@ -27,6 +27,11 @@ void startNote(char midi_note);
  * @brief Stops the piezo buzzer.
  */
 void stopNote(void);
+
+/*
+ * @brief Writes packet to turn LEDs on/off, depending on bool value.
+ */
+void writeLights(uint16_t *packetptr, bool lights[4]);
 
 
 
