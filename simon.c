@@ -1,32 +1,20 @@
 #include <ti/devices/msp/msp.h>
 #include "simon_setup.h"
-#include "simon_io.h"
+#include "simon_av.h"
 
 
-
-// Array for writing LED packets
-uint16_t txPacket[12];
 
 // SPI stuff
+uint16_t txPacket[12];
 int transmissionComplete = 0; // flag for SPI ISR wakeup
 int timerTicked = 0; // flag for timer ISR wakeup
 int idx = 0;
 int message_len = sizeof(txPacket) / sizeof(txPacket[0]);
 
 // Song stuff
-// Note durations are in multiples of 10ms
-// 10ms are always added to the end of each note
-// PAUSE is added on top
-// So notes will last 10ms * (QUARTER + PAUSE + 1)
-#define QUARTER 45
-#define PAUSE 4
-#define NOTE_OFFSET 0
-
-int timerCount = -1;
-int noteIdx = 0;
-int notes[] = {88, 86, 84, 86, 88, 88, 88, -1, 86, 86, 86, -1, 88, 91, 91, -1, 88, 86, 84, 86, 88, 88, 88, 84, 86, 86, 88, 86, 84, -1, -1, -1};
-int LENGTH = sizeof(notes) / sizeof(int);
-//int times[] = {QUARTER, QUARTER, QUARTER, QUARTER, QUARTER, QUARTER, QUARTER};
+int16_t timerCount = -1;
+uint16_t frameNum = 0;
+uint16_t timerLength;
 
 // Enum for FSM
 enum current_state_enum {
@@ -52,38 +40,37 @@ int main(void)
     InitializeMIDINotes();
 
     NVIC_EnableIRQ(TIMG0_INT_IRQn); // Enable the timer interrupt
-    TIMG0->COUNTERREGS.LOAD = 163; // Set timer
+    TIMG0->COUNTERREGS.LOAD = 163; // Set timer: approx 10ms
     TIMG0->COUNTERREGS.CTRCTL |= (GPTIMER_CTRCTL_EN_ENABLED);
 
     enum current_state_enum next_state;
     next_state = INTRO;
 
     while (1) { // this loop will execute once per timer interrupt
-        // BUTTONS ARE ACTIVE LOW
-        // BUTTONS ARE ACTIVE LOW
-        // BUTTONS ARE ACTIVE LOW
         switch (next_state) {
         case INTRO:
-            writeLights(txPacket, (bool[4]){0, 0, 0, 0}); // Set what SPI message will be transmitted. (all LEDs off)
             if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) != (SW1 | SW2 | SW3 | SW4) ) // if any buttons are on
                 next_state = LIGHTS_OFF;
             else
                 next_state = INTRO;
 
             timerCount++;
-            if (timerCount == 0) { // start of note, read note and play it
-                if (notes[noteIdx] == -1)
+            if (timerCount == 0) { // start of note, read note and play it, change lights, set length
+                if (INTRO_FRAMES[frameNum].note == -1)
                     stopNote();
                 else
-                    startNote(notes[noteIdx] + NOTE_OFFSET);
+                    startNote(INTRO_FRAMES[frameNum].note + NOTE_OFFSET);
+                writeLights(txPacket, INTRO_FRAMES[frameNum].lights);
+                timerLength = INTRO_FRAMES[frameNum].duration;
             }
-            if (timerCount == QUARTER) { // end of note, start pause
+            if (timerCount == timerLength) { // end of note, start pause
                 stopNote();
             }
-            if (timerCount == QUARTER + PAUSE) {
-                noteIdx = (noteIdx + 1) % LENGTH;
+            if (timerCount == timerLength + PAUSE) {
+                frameNum = (frameNum + 1) % INTRO_LENGTH;
                 timerCount = -1;
             }
+
             break;
 
         case LIGHTS_OFF:

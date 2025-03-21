@@ -4,9 +4,9 @@
 
 #include <math.h>
 #include <string.h>
-#include "simon_io.h"
+#include "simon_av.h"
 
-int MIDI_NOTE_PERIODS[127];
+uint32_t MIDI_NOTE_PERIODS[127];
 
 uint16_t OFF_BITS[] = {0x0, 0x0,
                        0xE000, 0x0000,
@@ -22,15 +22,15 @@ uint16_t YELLOW_BITS[] = {0xE500, 0x4040};
 
 
 void InitializeMIDINotes(void) {
-    for (char i = 0; i < 128; i++) {
-        MIDI_NOTE_PERIODS[i] = (int) (8000000.0f / (8.1758f * powf(2.0f,(i/12.0f))));
+    for (uint8_t i = 0; i < 128; i++) {
+        MIDI_NOTE_PERIODS[i] = (uint32_t) (8000000.0f / (8.1758f * powf(2.0f,(i/12.0f))));
     }
     return;
 }
 
 
 
-void startNote(char midi_note) {
+void startNote(int8_t midi_note) {
     TIMA1->COUNTERREGS.LOAD = (MIDI_NOTE_PERIODS[midi_note] - 1); // freq = 8000000/(LOAD+1)
     TIMA1->COUNTERREGS.CC_01[0] = (TIMA1->COUNTERREGS.LOAD  + 1) / 8; // 12.5% duty cycle because it sounds cool
     TIMA1->COUNTERREGS.CTRCTL |= (GPTIMER_CTRCTL_EN_ENABLED); // Enable the buzzer
@@ -59,3 +59,14 @@ void writeLights(uint16_t *packetptr, bool lights[4]) {
     if (lights[3])
         memcpy(packetptr+8, YELLOW_BITS, sizeof(YELLOW_BITS));
 }
+
+
+
+// Arrays for animations (lights and sound)
+// {duration, note (-1 for silence), {blue, red, green, yellow}}
+struct frame INTRO_FRAMES[] = {
+                               (struct frame){WHOLE, 60, {1, 1, 1, 1}},
+                               (struct frame){WHOLE, -1, {0, 0, 0, 0}},
+};
+uint16_t INTRO_LENGTH = sizeof(INTRO_FRAMES) / sizeof(struct frame);
+
