@@ -66,7 +66,28 @@ void writeLights(uint16_t *packetptr, bool lights[4]) {
 // {duration, note (-1 for silence), {blue, red, green, yellow}}
 struct frame INTRO_FRAMES[] = {
                                (struct frame){WHOLE, 60, {1, 1, 1, 1}},
-                               (struct frame){WHOLE, -1, {0, 0, 0, 0}},
+                               (struct frame){WHOLE, -1, {0, 0, 0, 0}}
 };
 uint16_t INTRO_LENGTH = sizeof(INTRO_FRAMES) / sizeof(struct frame);
 
+struct frame WIN_FRAMES[] = {
+                             (struct frame){QUARTER, -1, {0, 0, 0, 0}},
+                             (struct frame){WHOLE, 72, {1, 1, 1, 1}},
+                             (struct frame){WHOLE, -1, {0, 0, 0, 0}},
+                             (struct frame){WHOLE, 72, {1, 1, 1, 1}},
+                             (struct frame){WHOLE, -1, {0, 0, 0, 0}}
+};
+uint16_t WIN_LENGTH = sizeof(WIN_FRAMES) / sizeof(struct frame);
+
+struct frame LOSS_FRAMES[] = {
+                             (struct frame){EIGHTH, -1, {0, 0, 0, 0}},
+                             (struct frame){EIGHTH, 60, {1, 0, 0, 0}},
+                             (struct frame){EIGHTH, 63, {0, 0, 0, 1}},
+                             (struct frame){EIGHTH, 60, {1, 0, 0, 0}},
+                             (struct frame){EIGHTH, 63, {0, 0, 0, 1}},
+                             (struct frame){EIGHTH, 60, {1, 0, 0, 0}},
+                             (struct frame){EIGHTH, 63, {0, 0, 0, 1}},
+                             (struct frame){QUARTER, 60, {1, 0, 0, 0}},
+                             (struct frame){WHOLE, -1, {0, 0, 0, 0}},
+};
+uint16_t LOSS_LENGTH = sizeof(LOSS_FRAMES) / sizeof(struct frame);

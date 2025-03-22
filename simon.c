@@ -23,6 +23,7 @@ enum current_state_enum {
     CALL,
     RESPONSE_DEPRESS,
     RESPONSE_PRESS,
+    WAIT,
     LOSS,
     WIN
 };
@@ -30,6 +31,7 @@ enum current_state_enum {
 // Game stuff
 #define MAX_PAT_LENGTH 5
 #define TIMEOUT 199
+#define WAIT_TIME 49
 uint16_t patLength;
 uint16_t currentSeed;
 uint16_t currentRand;
@@ -121,7 +123,7 @@ int main(void)
             // end of frame, set up next frame, or go to RESPONSE if pattern is complete
             if (timerCount == GAME_PULSE + GAME_PAUSE) {
                 if (frameNum == patLength-1) {
-                    next_state = RESPONSE;
+                    next_state = RESPONSE_DEPRESS;
                     frameNum = 0;
                     srand(currentSeed);
                 } else {
@@ -133,128 +135,150 @@ int main(void)
             break;
 
         case RESPONSE_DEPRESS:
-            if (frameNum == patLength-1) { // If pattern is complete, either iterate length or go to win
-                if (patLength == MAX_PAT_LENGTH) {
+            if (frameNum == patLength) { // If pattern is complete, either iterate length or go to win
+                if (patLength == MAX_PAT_LENGTH)
                     next_state = WIN;
-                } else {
-                    next_state = CALL;
-                    patLength++;
-                    srand(currentSeed);
-                }
+                else
+                    next_state = WAIT;
                 timerCount = -1;
                 frameNum = 0;
             } else if (timerCount == TIMEOUT) { // If pattern isn't done yet, check for timeout
                 next_state = LOSS;
-            } else { // Otherwise, check input
+                timerCount = -1;
+                frameNum = 0;
+            } else if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) !=
+                    (SW1 | SW2 | SW3 | SW4) ) { // Otherwise, check input - if any button is on, then get rand and check
+                currentRand = rand();
                 if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // if the button is on
-                    if (rand() == 0) { // check if next random number matches
+                    if (currentRand == 0) { // check if next pattern number matches
                         next_state = RESPONSE_PRESS;
                         startNote(79 + NOTE_OFFSET);
                         writeLights(txPacket, (bool[4]){1, 0, 0, 0});
                         timerCount = -1;
                     } else {
                         next_state = LOSS;
+                        timerCount = -1;
+                        frameNum = 0;
                     }
                 }
                 if ( (GPIOA->DIN31_0 & SW2) != SW2 ) {
-                    next_state = RED;
-                    startNote(88 + NOTE_OFFSET);
+                    if (currentRand == 1) {
+                        next_state = RESPONSE_PRESS;
+                        startNote(88 + NOTE_OFFSET);
+                        writeLights(txPacket, (bool[4]){0, 1, 0, 0});
+                        timerCount = -1;
+                    } else {
+                        next_state = LOSS;
+                        timerCount = -1;
+                        frameNum = 0;
+                    }
                 }
                 if ( (GPIOA->DIN31_0 & SW3) != SW3 ) {
-                    next_state = GREEN;
-                    startNote(91 + NOTE_OFFSET);
+                    if (currentRand == 2) {
+                        next_state = RESPONSE_PRESS;
+                        startNote(91 + NOTE_OFFSET);
+                        writeLights(txPacket, (bool[4]){0, 0, 1, 0});
+                        timerCount = -1;
+                    } else {
+                        next_state = LOSS;
+                        timerCount = -1;
+                        frameNum = 0;
+                    }
                 }
                 if ( (GPIOA->DIN31_0 & SW4) != SW4 ) {
-                    next_state = YELLOW;
-                    startNote(84 + NOTE_OFFSET);
+                    if (currentRand == 3) {
+                        next_state = RESPONSE_PRESS;
+                        startNote(84 + NOTE_OFFSET);
+                        writeLights(txPacket, (bool[4]){0, 0, 0, 1});
+                        timerCount = -1;
+                    } else {
+                        next_state = LOSS;
+                        timerCount = -1;
+                        frameNum = 0;
+                    }
                 }
             }
-
-
-
-
 
             break;
 
         case RESPONSE_PRESS:
             if (timerCount == TIMEOUT) {
                 next_state = LOSS;
+                timerCount = -1;
+                frameNum = 0;
             } else if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) ==
                     (SW1 | SW2 | SW3 | SW4) ) { // If all buttons are off
                 next_state = RESPONSE_DEPRESS;
+                stopNote();
+                writeLights(txPacket, (bool[4]){0, 0, 0, 0});
                 frameNum++;
             }
 
             break;
 
-            next_state = CALL;
-            timerCount = -1;
-            frameNum = 0;
-            patLength++;
-            srand(currentSeed);
-        /*
-        case LIGHTS_OFF:
-            writeLights(txPacket, (bool[4]){0, 0, 0, 0});
-            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // if the button is on
-                next_state = BLUE;
-                startNote(79 + NOTE_OFFSET);
+        case WAIT:
+            if (timerCount == WAIT_TIME) {
+                next_state = CALL;
+                timerCount = -1;
+                patLength++;
+                srand(currentSeed);
             }
-            else if ( (GPIOA->DIN31_0 & SW2) != SW2 ) {
-                next_state = RED;
-                startNote(88 + NOTE_OFFSET);
-            }
-            else if ( (GPIOA->DIN31_0 & SW3) != SW3 ) {
-                next_state = GREEN;
-                startNote(91 + NOTE_OFFSET);
-            }
-            else if ( (GPIOA->DIN31_0 & SW4) != SW4 ) {
-                next_state = YELLOW;
-                startNote(84 + NOTE_OFFSET);
-            }
-            else
-                next_state = LIGHTS_OFF;
+
             break;
 
-        case BLUE:
-            writeLights(txPacket, (bool[4]){1, 0, 0, 0});
-            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) // if the button is on
-                next_state = BLUE;
-            else {
-                next_state = LIGHTS_OFF;
-                stopNote();
+        case WIN:
+            // start of frame: set length, play note, change lights
+            if (timerCount == 0) {
+                if (WIN_FRAMES[frameNum].note == -1)
+                    stopNote();
+                else
+                    startNote(WIN_FRAMES[frameNum].note);
+                writeLights(txPacket, WIN_FRAMES[frameNum].lights);
+                timerLength = WIN_FRAMES[frameNum].duration;
             }
+            // end of note, start pause
+            if (timerCount == timerLength) {
+                stopNote();
+                writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+            }
+            // end of frame, set up next frame
+            if (timerCount == timerLength + PAUSE) {
+                frameNum++;
+                timerCount = -1;
+                if (frameNum == WIN_LENGTH) {
+                    next_state = INTRO;
+                    frameNum = 0;
+                }
+            }
+
             break;
 
-        case RED:
-            writeLights(txPacket, (bool[4]){0, 1, 0, 0});
-            if ( (GPIOA->DIN31_0 & SW2) != SW2 ) // if the button is on
-                next_state = RED;
-            else {
-                next_state = LIGHTS_OFF;
-                stopNote();
+        case LOSS:
+            // start of frame: set length, play note, change lights
+            if (timerCount == 0) {
+                if (LOSS_FRAMES[frameNum].note == -1)
+                    stopNote();
+                else
+                    startNote(LOSS_FRAMES[frameNum].note);
+                writeLights(txPacket, LOSS_FRAMES[frameNum].lights);
+                timerLength = LOSS_FRAMES[frameNum].duration;
             }
-            break;
+            // end of note, start pause
+            if (timerCount == timerLength) {
+                stopNote();
+                writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+            }
+            // end of frame, set up next frame
+            if (timerCount == timerLength + PAUSE) {
+                frameNum++;
+                timerCount = -1;
+                if (frameNum == LOSS_LENGTH) {
+                    next_state = INTRO;
+                    frameNum = 0;
+                }
+            }
 
-        case GREEN:
-            writeLights(txPacket, (bool[4]){0, 0, 1, 0});
-            if ( (GPIOA->DIN31_0 & SW3) != SW3 ) // if the button is on
-                next_state = GREEN;
-            else {
-                next_state = LIGHTS_OFF;
-                stopNote();
-            }
             break;
-
-        case YELLOW:
-            writeLights(txPacket, (bool[4]){0, 0, 0, 1});
-            if ( (GPIOA->DIN31_0 & SW4) != SW4 ) // if the button is on
-                next_state = YELLOW;
-            else {
-                next_state = LIGHTS_OFF;
-                stopNote();
-            }
-            break;
-        */
 
         default:
             next_state = INTRO;

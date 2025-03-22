@@ -59,6 +59,12 @@ struct frame {
 extern struct frame INTRO_FRAMES[];
 extern uint16_t INTRO_LENGTH;
 
+extern struct frame WIN_FRAMES[];
+extern uint16_t WIN_LENGTH;
+
+extern struct frame LOSS_FRAMES[];
+extern uint16_t LOSS_LENGTH;
+
 
 
 #ifdef __cplusplus
