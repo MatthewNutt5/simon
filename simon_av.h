@@ -33,6 +33,11 @@ void stopNote(void);
  */
 void writeLights(uint16_t *packetptr, bool lights[4]);
 
+// Used for playing the game
+#define GAME_PULSE 50
+#define GAME_PAUSE 49
+#define WAIT_TIME 49
+
 // Note durations are in multiples of 10ms
 // 10ms are always added to the end of each note
 // PAUSE is added on top
@@ -41,10 +46,10 @@ void writeLights(uint16_t *packetptr, bool lights[4]);
 #define QUARTER 45
 #define HALF 95
 #define WHOLE 195
+#define DOUBLE_WHOLE 395
+#define DOTTED_DOUBLE_WHOLE 595
+#define DOUBLE_DOTTED_WHOLE 495
 #define PAUSE 4
-// Used for playing the game
-#define GAME_PULSE 50
-#define GAME_PAUSE 49
 
 #define NOTE_OFFSET 0 // Offset game note pitches by semitones
 

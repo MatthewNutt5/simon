@@ -17,6 +17,14 @@ int16_t timerCount = -1;
 uint16_t frameNum = 0;
 uint16_t timerLength;
 
+// Game stuff
+// More constants are defined in "simon_av.h"
+#define MAX_PAT_LENGTH 5
+#define TIMEOUT 299
+uint16_t patLength;
+uint16_t currentSeed;
+uint16_t currentRand;
+
 // Enum for FSM
 enum current_state_enum {
     INTRO,
@@ -27,14 +35,6 @@ enum current_state_enum {
     LOSS,
     WIN
 };
-
-// Game stuff
-#define MAX_PAT_LENGTH 5
-#define TIMEOUT 199
-#define WAIT_TIME 49
-uint16_t patLength;
-uint16_t currentSeed;
-uint16_t currentRand;
 
 
 
@@ -82,7 +82,7 @@ int main(void)
                 // end of note, start pause
                 if (timerCount == timerLength) {
                     stopNote();
-                    writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+                    //writeLights(txPacket, (bool[4]){0, 0, 0, 0});
                 }
                 // end of frame, set up next frame
                 if (timerCount == timerLength + PAUSE) {
@@ -135,7 +135,7 @@ int main(void)
             break;
 
         case RESPONSE_DEPRESS:
-            if (frameNum == patLength) { // If pattern is complete, either iterate length or go to win
+            if (frameNum == patLength) { // If pattern is complete, either iterate length in WAIT or go to WIN
                 if (patLength == MAX_PAT_LENGTH)
                     next_state = WIN;
                 else
@@ -244,11 +244,11 @@ int main(void)
             // end of frame, set up next frame
             if (timerCount == timerLength + PAUSE) {
                 frameNum++;
-                timerCount = -1;
                 if (frameNum == WIN_LENGTH) {
                     next_state = INTRO;
                     frameNum = 0;
                 }
+                timerCount = -1;
             }
 
             break;
