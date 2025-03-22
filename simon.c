@@ -1,6 +1,7 @@
 #include <ti/devices/msp/msp.h>
 #include "simon_setup.h"
 #include "simon_av.h"
+#include "simon_random.h"
 
 
 
@@ -11,20 +12,27 @@ int timerTicked = 0; // flag for timer ISR wakeup
 int idx = 0;
 int message_len = sizeof(txPacket) / sizeof(txPacket[0]);
 
-// Song stuff
+// Animation stuff
 int16_t timerCount = -1;
 uint16_t frameNum = 0;
 uint16_t timerLength;
 
 // Enum for FSM
 enum current_state_enum {
-    LIGHTS_OFF = 0,
-    BLUE = 1,
-    RED = 2,
-    GREEN = 3,
-    YELLOW = 4,
-    INTRO = 5
+    INTRO,
+    CALL,
+    RESPONSE_DEPRESS,
+    RESPONSE_PRESS,
+    LOSS,
+    WIN
 };
+
+// Game stuff
+#define MAX_PAT_LENGTH 5
+#define TIMEOUT 199
+uint16_t patLength;
+uint16_t currentSeed;
+uint16_t currentRand;
 
 
 
@@ -47,35 +55,147 @@ int main(void)
     next_state = INTRO;
 
     while (1) { // this loop will execute once per timer interrupt
+        timerCount++; // counting # of interrupts
+        // Begin FSM ===========================================================
         switch (next_state) {
         case INTRO:
-            if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) != (SW1 | SW2 | SW3 | SW4) ) // if any buttons are on
-                next_state = LIGHTS_OFF;
-            else
-                next_state = INTRO;
-
-            timerCount++;
-            if (timerCount == 0) { // start of note, read note and play it, change lights, set length
-                if (INTRO_FRAMES[frameNum].note == -1)
+            if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) !=
+                    (SW1 | SW2 | SW3 | SW4) ) { // if any buttons are on
+                next_state = CALL;
+                timerCount = -1;
+                frameNum = 0;
+                patLength = 1;
+                currentSeed = GenerateRandomNumber() >> 16; // gets upper 16 bits of TRNG result
+                srand(currentSeed);
+            } else {
+                // start of frame: set length, play note, change lights
+                if (timerCount == 0) {
+                    if (INTRO_FRAMES[frameNum].note == -1)
+                        stopNote();
+                    else
+                        startNote(INTRO_FRAMES[frameNum].note);
+                    writeLights(txPacket, INTRO_FRAMES[frameNum].lights);
+                    timerLength = INTRO_FRAMES[frameNum].duration;
+                }
+                // end of note, start pause
+                if (timerCount == timerLength) {
                     stopNote();
-                else
-                    startNote(INTRO_FRAMES[frameNum].note + NOTE_OFFSET);
-                writeLights(txPacket, INTRO_FRAMES[frameNum].lights);
-                timerLength = INTRO_FRAMES[frameNum].duration;
+                    writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+                }
+                // end of frame, set up next frame
+                if (timerCount == timerLength + PAUSE) {
+                    frameNum = (frameNum + 1) % INTRO_LENGTH; // loops frames
+                    timerCount = -1;
+                }
             }
-            if (timerCount == timerLength) { // end of note, start pause
+
+            break;
+
+        case CALL:
+            // use same system as animations for timing lights and buttons
+            // start of pattern frame: play next note/light
+            if (timerCount == 0) {
+                currentRand = rand();
+                if (currentRand == 0) {
+                    startNote(79 + NOTE_OFFSET);
+                    writeLights(txPacket, (bool[4]){1, 0, 0, 0});
+                }
+                if (currentRand == 1) {
+                    startNote(88 + NOTE_OFFSET);
+                    writeLights(txPacket, (bool[4]){0, 1, 0, 0});
+                }
+                if (currentRand == 2) {
+                    startNote(91 + NOTE_OFFSET);
+                    writeLights(txPacket, (bool[4]){0, 0, 1, 0});
+                }
+                if (currentRand == 3) {
+                    startNote(84 + NOTE_OFFSET);
+                    writeLights(txPacket, (bool[4]){0, 0, 0, 1});
+                }
+            }
+            // end of pulse, start pause
+            if (timerCount == GAME_PULSE) {
                 stopNote();
+                writeLights(txPacket, (bool[4]){0, 0, 0, 0});
             }
-            if (timerCount == timerLength + PAUSE) {
-                frameNum = (frameNum + 1) % INTRO_LENGTH;
+            // end of frame, set up next frame, or go to RESPONSE if pattern is complete
+            if (timerCount == GAME_PULSE + GAME_PAUSE) {
+                if (frameNum == patLength-1) {
+                    next_state = RESPONSE;
+                    frameNum = 0;
+                    srand(currentSeed);
+                } else {
+                    frameNum++;
+                }
                 timerCount = -1;
             }
 
             break;
 
+        case RESPONSE_DEPRESS:
+            if (frameNum == patLength-1) { // If pattern is complete, either iterate length or go to win
+                if (patLength == MAX_PAT_LENGTH) {
+                    next_state = WIN;
+                } else {
+                    next_state = CALL;
+                    patLength++;
+                    srand(currentSeed);
+                }
+                timerCount = -1;
+                frameNum = 0;
+            } else if (timerCount == TIMEOUT) { // If pattern isn't done yet, check for timeout
+                next_state = LOSS;
+            } else { // Otherwise, check input
+                if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // if the button is on
+                    if (rand() == 0) { // check if next random number matches
+                        next_state = RESPONSE_PRESS;
+                        startNote(79 + NOTE_OFFSET);
+                        writeLights(txPacket, (bool[4]){1, 0, 0, 0});
+                        timerCount = -1;
+                    } else {
+                        next_state = LOSS;
+                    }
+                }
+                if ( (GPIOA->DIN31_0 & SW2) != SW2 ) {
+                    next_state = RED;
+                    startNote(88 + NOTE_OFFSET);
+                }
+                if ( (GPIOA->DIN31_0 & SW3) != SW3 ) {
+                    next_state = GREEN;
+                    startNote(91 + NOTE_OFFSET);
+                }
+                if ( (GPIOA->DIN31_0 & SW4) != SW4 ) {
+                    next_state = YELLOW;
+                    startNote(84 + NOTE_OFFSET);
+                }
+            }
+
+
+
+
+
+            break;
+
+        case RESPONSE_PRESS:
+            if (timerCount == TIMEOUT) {
+                next_state = LOSS;
+            } else if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) ==
+                    (SW1 | SW2 | SW3 | SW4) ) { // If all buttons are off
+                next_state = RESPONSE_DEPRESS;
+                frameNum++;
+            }
+
+            break;
+
+            next_state = CALL;
+            timerCount = -1;
+            frameNum = 0;
+            patLength++;
+            srand(currentSeed);
+        /*
         case LIGHTS_OFF:
-            writeLights(txPacket, (bool[4]){0, 0, 0, 0}); // Set what SPI message will be transmitted. (all LEDs off)
-            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // If the button is on
+            writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // if the button is on
                 next_state = BLUE;
                 startNote(79 + NOTE_OFFSET);
             }
@@ -97,7 +217,7 @@ int main(void)
 
         case BLUE:
             writeLights(txPacket, (bool[4]){1, 0, 0, 0});
-            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) // If the button is on
+            if ( (GPIOA->DIN31_0 & SW1) != SW1 ) // if the button is on
                 next_state = BLUE;
             else {
                 next_state = LIGHTS_OFF;
@@ -107,7 +227,7 @@ int main(void)
 
         case RED:
             writeLights(txPacket, (bool[4]){0, 1, 0, 0});
-            if ( (GPIOA->DIN31_0 & SW2) != SW2 ) // If the button is on
+            if ( (GPIOA->DIN31_0 & SW2) != SW2 ) // if the button is on
                 next_state = RED;
             else {
                 next_state = LIGHTS_OFF;
@@ -117,7 +237,7 @@ int main(void)
 
         case GREEN:
             writeLights(txPacket, (bool[4]){0, 0, 1, 0});
-            if ( (GPIOA->DIN31_0 & SW3) != SW3 ) // If the button is on
+            if ( (GPIOA->DIN31_0 & SW3) != SW3 ) // if the button is on
                 next_state = GREEN;
             else {
                 next_state = LIGHTS_OFF;
@@ -127,18 +247,20 @@ int main(void)
 
         case YELLOW:
             writeLights(txPacket, (bool[4]){0, 0, 0, 1});
-            if ( (GPIOA->DIN31_0 & SW4) != SW4 ) // If the button is on
+            if ( (GPIOA->DIN31_0 & SW4) != SW4 ) // if the button is on
                 next_state = YELLOW;
             else {
                 next_state = LIGHTS_OFF;
                 stopNote();
             }
             break;
+        */
 
         default:
             next_state = INTRO;
 
         }
+        // End FSM =============================================================
 
         // Clear pending SPI interrupts
         NVIC_ClearPendingIRQ(SPI0_INT_IRQn);

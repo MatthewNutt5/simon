@@ -42,8 +42,11 @@ void writeLights(uint16_t *packetptr, bool lights[4]);
 #define HALF 95
 #define WHOLE 195
 #define PAUSE 4
+// Used for playing the game
+#define GAME_PULSE 50
+#define GAME_PAUSE 49
 
-#define NOTE_OFFSET 0 // Offset note pitches by semitones
+#define NOTE_OFFSET 0 // Offset game note pitches by semitones
 
 // Struct representing each frame of animation (duration, note, lights)
 struct frame {
