@@ -8,7 +8,7 @@ This project is based around a board provided by the ELEC 327 instructor that in
 
 ## Main Program
 
-The `simon.c` file uses the included libraries to play the game.
+The `simon.c` file uses the included libraries to implement the game.
 
 ### Setup
 
@@ -16,7 +16,9 @@ In `simon.c`, necessary setup includes defining global constants, declaring glob
 
 ### Loop
 
-After the setup in `simon.c`, the main loop consists of a persistent interrupt timer with a ~10ms period that iterates on an FSM. The FSM manages the state of the game - initialized, blinking pattern, waiting for response, etc. The FSM also keeps track of the number of interrupts. Based on the current pushbutton inputs, number of interrupts, and randomly generated numbers, the FSM will move between different game states according to the rules of Simon. In certain game states, the FSM will play animations defined in the `simon_av` library.
+After the setup in `simon.c`, the main loop consists of a persistent interrupt timer with a ~10ms period that iterates on an FSM. The FSM manages the state of the game - initialized, blinking pattern, waiting for response, etc.
+The FSM also keeps track of the number of interrupts. Based on the current pushbutton inputs, number of interrupts, and randomly generated numbers, the FSM will move between different game states according to the rules of Simon.
+In certain game states, the FSM will play animations defined in the `simon_av` library.
 
 The 10ms period is specifically useful for providing the timing of the animations and the timeout feature. Additionally, it provides de-facto debouncing, as the pushbutton bouncing lasts less than 10ms.
 
@@ -42,7 +44,8 @@ For the LEDs, the library has one function.
 
 `writeLights`: This function writes an SPI packet at the given pointer that corresponds to the given light settings, i.e. which lights are on and off. The packet is actually sent in the interrupt loop of `simon.c`.
 
-The library additionally defines a few arrays containing animations for the board to play. Animations consist of frames, where each frame has a duration, note for the buzzer (or silence), and an array indicating which LEDs should be enabled or disabled. Timing constants are given in the `.h` header file, while animations are defined in the `.c` source file.
+The library additionally defines a few arrays containing animations for the board to play. Animations consist of frames, where each frame has a duration, note for the buzzer (or silence), and an array indicating which LEDs should be enabled or disabled.
+Timing constants are given in the `.h` header file, while animations are defined in the `.c` source file.
 
 ### `simon_setup`, `simon_random`
 
@@ -50,7 +53,7 @@ These libraries are given by the instructor. `simon_setup` provides boilerplate 
 
 ## Rubric/Score
 
-Based on the provided rubric, this project should earn 150/150 points.
+Based on the provided rubric for the midterm assignment, this project should earn 150/150 points.
 
 1) 10pts: *"When powered on, does the game display an animation that involves changing patterns of the lights?"* Yes, the board displays an animation that includes changing lights and musical tones. Do you know the tune?
 
@@ -83,4 +86,5 @@ Based on the provided rubric, this project should earn 150/150 points.
 ## Known Issues
 
 The code structure of this project is imperfect. The most glaring issue is the complexity of the main loop: Ideally, counter variables and such for playing the animations would be hidden away in a separate library. However, differences in each use-case necessitate individualized code: The `CALL` state uses randomly-generated sequences instead of predefined animations, the `INTRO` state loops while the `WIN` and `LOSS` states don't, etc. Off-by-one errors are therefore easy to come by, but all (known) errors have been found and resolved.
+
 Another issue is the lack of strict debouncing. As previously described, the 10ms timer period effectively provides debouncing, and testing hasn't revealed any flaws, but either a legitimate debouncing scheme or characterization of the given pushbuttons' bouncing behavior (proof that they always bounce for less than 10ms) would provide ease-of-mind.
