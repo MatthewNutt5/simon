@@ -33,11 +33,6 @@ void stopNote(void);
  */
 void writeLights(uint16_t *packetptr, bool lights[4]);
 
-// Used for playing the game
-#define GAME_PULSE 50
-#define GAME_PAUSE 49
-#define WAIT_TIME 49
-
 // Note durations are in multiples of 10ms
 // 10ms are always added to the end of each note
 // PAUSE is added on top
@@ -54,6 +49,7 @@ void writeLights(uint16_t *packetptr, bool lights[4]);
 #define NOTE_OFFSET 0 // Offset game note pitches by semitones
 
 // Struct representing each frame of animation (duration, note, lights)
+// Not directly used by any library function, but by main loop - define here instead of .c source
 struct frame {
     uint16_t duration;
     int8_t note;

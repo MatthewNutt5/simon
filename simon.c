@@ -13,27 +13,32 @@ int idx = 0;
 int message_len = sizeof(txPacket) / sizeof(txPacket[0]);
 
 // Animation stuff
-int16_t timerCount = -1;
+int16_t timerCount = -1; // Keeps track of number of 10ms interrupts
 uint16_t frameNum = 0;
 uint16_t timerLength;
 
 // Game stuff
-// More constants are defined in "simon_av.h"
-#define MAX_PAT_LENGTH 5
+#define MAX_PAT_LENGTH 5 /* MODIFIES # OF STEPS REQUIRED TO WIN */
 #define TIMEOUT 299
-uint16_t patLength;
-uint16_t currentSeed;
-uint16_t currentRand;
+
+#define PLAYBACK_HIGH 50 // High time during pattern playback
+#define PLAYBACK_LOW 49 // Low time during pattern playback
+#define WAIT_TIME 99 // Delay before starting/resuming pattern playback
+uint16_t patLength; // Keeps track of current pattern length - starts at 1, goes to max
+uint16_t currentSeed; // Seed of PRNG for current round
+uint16_t currentRand; // Used to temporarily hold result of PRNG
 
 // Enum for FSM
 enum current_state_enum {
-    INTRO,
-    CALL,
-    RESPONSE_DEPRESS,
-    RESPONSE_PRESS,
-    WAIT,
-    LOSS,
-    WIN
+    INTRO,              // Power-up animation, waits for button press to begin game
+    WAIT_START,         // Interval between starting game and first pattern, to make the distinction clearer
+    CALL,               // Displays randomly-generated sequence with lights and buzzer tones
+    RESPONSE_DEPRESS,   // Waits for next response from the user, checks for correctness, end of pattern, and timeout
+                        // Also enables lights and buzzer on each response
+    RESPONSE_PRESS,     // Waits for user to depress the button, restarts timeout counter, stops light/buzzer when button is depressed
+    WAIT_CONTINUE,      // Interval between final correct response and win animation
+    LOSS,               // Plays loss animation when wrong button is pressed or when timeout elapses, returns to INTRO
+    WIN                 // Plays win animation when pattern of length MAX_PAT_LENGTH is correctly recited, returns to INTRO
 };
 
 
@@ -49,8 +54,8 @@ int main(void)
 
     InitializeMIDINotes();
 
-    NVIC_EnableIRQ(TIMG0_INT_IRQn); // Enable the timer interrupt
-    TIMG0->COUNTERREGS.LOAD = 163; // Set timer: approx 10ms
+    NVIC_EnableIRQ(TIMG0_INT_IRQn); // enable the timer interrupt
+    TIMG0->COUNTERREGS.LOAD = 163; // set timer: approx 10ms
     TIMG0->COUNTERREGS.CTRCTL |= (GPTIMER_CTRCTL_EN_ENABLED);
 
     enum current_state_enum next_state;
@@ -63,7 +68,9 @@ int main(void)
         case INTRO:
             if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) !=
                     (SW1 | SW2 | SW3 | SW4) ) { // if any buttons are on
-                next_state = CALL;
+                next_state = WAIT_START;
+                stopNote();
+                writeLights(txPacket, (bool[4]){0, 0, 0, 0});
                 timerCount = -1;
                 frameNum = 0;
                 patLength = 1;
@@ -82,6 +89,7 @@ int main(void)
                 // end of note, start pause
                 if (timerCount == timerLength) {
                     stopNote();
+                    // Commented out to make this animation a little smoother; enabled for the other animations
                     //writeLights(txPacket, (bool[4]){0, 0, 0, 0});
                 }
                 // end of frame, set up next frame
@@ -89,6 +97,14 @@ int main(void)
                     frameNum = (frameNum + 1) % INTRO_LENGTH; // loops frames
                     timerCount = -1;
                 }
+            }
+
+            break;
+
+        case WAIT_START:
+            if (timerCount == WAIT_TIME) {
+                next_state = CALL;
+                timerCount = -1;
             }
 
             break;
@@ -116,12 +132,12 @@ int main(void)
                 }
             }
             // end of pulse, start pause
-            if (timerCount == GAME_PULSE) {
+            if (timerCount == PLAYBACK_HIGH) {
                 stopNote();
                 writeLights(txPacket, (bool[4]){0, 0, 0, 0});
             }
             // end of frame, set up next frame, or go to RESPONSE if pattern is complete
-            if (timerCount == GAME_PULSE + GAME_PAUSE) {
+            if (timerCount == PLAYBACK_HIGH + PLAYBACK_LOW) {
                 if (frameNum == patLength-1) {
                     next_state = RESPONSE_DEPRESS;
                     frameNum = 0;
@@ -135,19 +151,19 @@ int main(void)
             break;
 
         case RESPONSE_DEPRESS:
-            if (frameNum == patLength) { // If pattern is complete, either iterate length in WAIT or go to WIN
+            if (frameNum == patLength) { // if pattern is complete, either iterate length in WAIT_CONTINUE or go to WIN
                 if (patLength == MAX_PAT_LENGTH)
                     next_state = WIN;
                 else
-                    next_state = WAIT;
+                    next_state = WAIT_CONTINUE;
                 timerCount = -1;
                 frameNum = 0;
-            } else if (timerCount == TIMEOUT) { // If pattern isn't done yet, check for timeout
+            } else if (timerCount == TIMEOUT) { // if pattern isn't done yet, check for timeout
                 next_state = LOSS;
                 timerCount = -1;
                 frameNum = 0;
             } else if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) !=
-                    (SW1 | SW2 | SW3 | SW4) ) { // Otherwise, check input - if any button is on, then get rand and check
+                    (SW1 | SW2 | SW3 | SW4) ) { // otherwise, check input - if any button is on, then get rand and check
                 currentRand = rand();
                 if ( (GPIOA->DIN31_0 & SW1) != SW1 ) { // if the button is on
                     if (currentRand == 0) { // check if next pattern number matches
@@ -207,7 +223,7 @@ int main(void)
                 timerCount = -1;
                 frameNum = 0;
             } else if ( (GPIOA->DIN31_0 & (SW1 | SW2 | SW3 | SW4)) ==
-                    (SW1 | SW2 | SW3 | SW4) ) { // If all buttons are off
+                    (SW1 | SW2 | SW3 | SW4) ) { // if all buttons are off
                 next_state = RESPONSE_DEPRESS;
                 stopNote();
                 writeLights(txPacket, (bool[4]){0, 0, 0, 0});
@@ -216,7 +232,7 @@ int main(void)
 
             break;
 
-        case WAIT:
+        case WAIT_CONTINUE:
             if (timerCount == WAIT_TIME) {
                 next_state = CALL;
                 timerCount = -1;
@@ -282,6 +298,8 @@ int main(void)
 
         default:
             next_state = INTRO;
+
+            break;
 
         }
         // End FSM =============================================================

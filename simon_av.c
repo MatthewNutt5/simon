@@ -23,7 +23,7 @@ uint16_t YELLOW_BITS[] = {0xE500, 0x4040};
 
 void InitializeMIDINotes(void) {
     for (uint8_t i = 0; i < 128; i++) {
-        MIDI_NOTE_PERIODS[i] = (uint32_t) (8000000.0f / (8.1758f * powf(2.0f,(i/12.0f))));
+        MIDI_NOTE_PERIODS[i] = (uint32_t) (8000000.0f / (8.1758f * powf(2.0f,(i/12.0f)))); // Math to determine note periods
     }
     return;
 }
