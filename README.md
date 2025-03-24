@@ -4,7 +4,7 @@ Midterm project for ELEC 327 - Simon memory game implemented on MSPM0G3507 micro
 
 ### Description
 
-This project is based around a board provided by the ELEC 327 instructor that integrates the microcontroller, four RGB LEDs, four pushbuttons, and a buzzer. With these components, the classic Simon memory game can be programmed.
+This project is based around a board the ELEC 327 instructor provided that integrates the microcontroller, four RGB LEDs, four pushbuttons, and a buzzer. With these components, the classic Simon memory game can be programmed.
 
 ## Main Program
 
@@ -12,11 +12,11 @@ The `simon.c` file uses the included libraries to implement the game.
 
 ### Setup
 
-In `simon.c`, necessary setup includes defining global constants, declaring global variables, and running initialization routines (described in the Libraries section).
+The necessary setup includes defining global constants, declaring global variables, and running initialization routines (described in the Libraries section).
 
 ### Loop
 
-After the setup in `simon.c`, the main loop consists of a persistent interrupt timer with a ~10ms period that iterates on an FSM. The FSM manages the state of the game - initialized, blinking pattern, waiting for response, etc.
+After the setup, the main loop consists of a persistent interrupt timer with a ~10ms period that iterates on an FSM. The FSM manages the state of the game - initialized, blinking pattern, waiting for response, etc.
 The FSM also keeps track of the number of interrupts. Based on the current pushbutton inputs, number of interrupts, and randomly generated numbers, the FSM will move between different game states according to the rules of Simon.
 In certain game states, the FSM will play animations defined in the `simon_av` library.
 
@@ -67,9 +67,9 @@ Based on the provided rubric for the midterm assignment, this project should ear
 
 6) 10pts: *"When a button is pressed during play, does the sound asssociated with that button track the button press, i.e., turn on when it is depressed and turn off when it is released?"* Yes.
 
-7) 10pts: *"Does the game transition to a ìlossî state if no button is pressed within some period during the response?"* Yes: The FSM keeps track of the number of interrupts between new button presses during the response phase, so if a certain interval passes (currently ~3s), the game goes to the loss state.
+7) 10pts: *"Does the game transition to a ‚Äúloss‚Äù state if no button is pressed within some period during the response?"* Yes: The FSM keeps track of the number of interrupts between new button presses during the response phase, so if a certain interval passes (currently ~3s), the game goes to the loss state.
 
-8) 10pts: *"Does the game transition to a ìlossî state if a wrong button is pressed during a response?"* Yes.
+8) 10pts: *"Does the game transition to a ‚Äúloss‚Äù state if a wrong button is pressed during a response?"* Yes.
 
 9) 10pts: *"If the player wins (correctly responds to a sequence of length 5), does the game display an animated sequence of lights?"* Yes.
 
