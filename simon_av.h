@@ -40,6 +40,7 @@ void writeLights(uint16_t *packetptr, bool lights[4]);
 #define EIGHTH 20
 #define QUARTER 45
 #define HALF 95
+#define HALF_AND_EIGHTH 120
 #define WHOLE 195
 #define DOUBLE_WHOLE 395
 #define DOTTED_DOUBLE_WHOLE 595

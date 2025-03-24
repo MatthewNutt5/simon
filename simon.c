@@ -89,8 +89,8 @@ int main(void)
                 // end of note, start pause
                 if (timerCount == timerLength) {
                     stopNote();
-                    // Commented out to make this animation a little smoother; enabled for the other animations
-                    //writeLights(txPacket, (bool[4]){0, 0, 0, 0});
+                    // Can comment this out to make the animation smoother
+                    writeLights(txPacket, (bool[4]){0, 0, 0, 0});
                 }
                 // end of frame, set up next frame
                 if (timerCount == timerLength + PAUSE) {

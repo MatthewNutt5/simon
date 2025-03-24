@@ -64,6 +64,7 @@ void writeLights(uint16_t *packetptr, bool lights[4]) {
 
 // Arrays for animations (lights and sound)
 // {duration, midi note (-1 for silence), {blue, red, green, yellow}}
+/*
 struct frame INTRO_FRAMES[] = {
                                (struct frame){HALF, 73, {0, 0, 1, 0}},
                                (struct frame){QUARTER, 71, {0, 1, 0, 0}},
@@ -98,6 +99,38 @@ struct frame INTRO_FRAMES[] = {
 
                                (struct frame){DOUBLE_WHOLE, 68, {1, 1, 1, 1}},
                                (struct frame){WHOLE, -1, {0, 0, 0, 0}},
+};
+*/
+struct frame INTRO_FRAMES[] = {
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 64, {0, 1, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 62, {0, 0, 1, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 60, {0, 0, 0, 1}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 58, {0, 0, 0, 1}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 59, {0, 0, 0, 1}},
+                               (struct frame){EIGHTH, 60, {0, 0, 1, 0}},
+
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 64, {0, 1, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 62, {0, 0, 1, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 60, {0, 0, 0, 1}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){EIGHTH, 52, {1, 0, 0, 0}},
+                               (struct frame){HALF_AND_EIGHTH, 58, {0, 1, 0, 1}}
 };
 uint16_t INTRO_LENGTH = sizeof(INTRO_FRAMES) / sizeof(struct frame);
 
